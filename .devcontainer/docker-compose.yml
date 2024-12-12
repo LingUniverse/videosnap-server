@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  videosnap-service:
+    container_name: videosnap-service-${USER}
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspace
+    user: vscode
+    command: sleep infinity
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-${USER}-${COMPOSE_PROJECT_NAME}
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql
+      MYSQL_DATABASE: videosnap
+      MYSQL_USER: videosnap
+      MYSQL_PASSWORD: videosnap
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+volumes:
+  mysql-data:
