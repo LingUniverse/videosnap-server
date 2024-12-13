@@ -22,7 +22,9 @@ async def lifespan(app: FastAPI):
 async def startup():
     """Actions to run on app startup."""
     logger.info("App is starting up.")
-
+    os.environ["AZURE_API_KEY"] = SETTINGS.AZURE_API_KEY.get_secret_value()
+    os.environ["AZURE_API_BASE"] = SETTINGS.AZURE_API_BASE
+    os.environ["AZURE_API_VERSION"] = SETTINGS.AZURE_API_VERSION
 
 async def shutdown():
     """Actions to run on app's shutdown."""

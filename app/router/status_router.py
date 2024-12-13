@@ -27,18 +27,10 @@ class PrettyJSONResponse(Response):
             separators=(", ", ": "),
         ).encode("utf-8")
 
-
 @router.get("/")
 async def heartbeat():
     """Heartbeat"""
     return {"status": "ok"}
-
-
-# @router.get("/admin/settings", response_class=PrettyJSONResponse)
-# async def system_settings():
-#     """System Settings For Debug"""
-#     return SETTINGS
-
 
 @router.get("/admin/manifest", response_class=PrettyJSONResponse)
 async def manifest():

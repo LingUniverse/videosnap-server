@@ -21,9 +21,15 @@ class AppSettings(BaseSettings):
 
     VIDEOSNAP_API_KEY: str
 
-    OPENAI_KEY: SecretStr
-    OPENAI_BASE_URL: str
+    AZURE_API_KEY: SecretStr
+    AZURE_API_BASE: str
+    AZURE_API_VERSION: str
 
+    MINIMAX_VIDEO_GENERATION_API_KEY: SecretStr
+    MINIMAX_VIDEO_GENERATION_BASE_URL: str
+    MINIMAX_VIDEO_GENERATION_CALLBACK_URL: str
+    MINIMAX_VIDEO_GENERATION_STATUS_URL: str
+    
     model_config = SettingsConfigDict(env_file=os.getenv("ENV_FILE"), env_file_encoding="utf-8", extra="ignore")
 
 

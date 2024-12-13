@@ -7,4 +7,4 @@ sudo chown vscode:vscode /workspace
 cd /workspace
 
 # 运行数据库迁移
-alembic upgrade head
+# alembic upgrade head

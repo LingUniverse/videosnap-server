@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Generic, Optional, TypeVar
+from uuid import UUID
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import ConfigDict, Field
@@ -25,13 +26,12 @@ class StatusCode(int, Enum):
 
 class BaseMixin(PydanticBaseModel):
     """base mixin"""
+    created_at: datetime
+    updated_at: datetime
+    id: UUID
 
-    id: Optional[PyObjectId] = Field(alias="_id", default=None)
-    created_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
-    updated_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
-
-    model_config = ConfigDict(use_enum_values=True)
-
+    class Config:
+        json_encoders = {datetime: lambda v: v.strftime("%Y-%m-%dT%H:%M:%S.%fZ")}
 
 class ResponseModel(Generic[DataT], PydanticBaseModel):
     """response model"""
