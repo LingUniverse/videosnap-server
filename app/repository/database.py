@@ -16,7 +16,7 @@ from sqlalchemy.orm import sessionmaker
 
 DB_USER = os.getenv("DB_USER", "videosnap")
 DB_PASS = os.getenv("DB_PASS", "videosnap")
-DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_HOST = os.getenv("DB_HOST", "mysql")
 DB_PORT = os.getenv("DB_PORT", "3306")
 DB_NAME = os.getenv("DB_NAME", "videosnap")
 

@@ -33,7 +33,7 @@ class BaseMixin(PydanticBaseModel):
     class Config:
         json_encoders = {datetime: lambda v: v.strftime("%Y-%m-%dT%H:%M:%S.%fZ")}
 
-class ResponseModel(Generic[DataT], PydanticBaseModel):
+class ResponseModel(PydanticBaseModel, Generic[DataT]):
     """response model"""
 
     code: StatusCode = Field(..., description="Response status code")
