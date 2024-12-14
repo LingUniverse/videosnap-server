@@ -13,6 +13,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy_utils import UUIDType
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from pydantic import BaseModel as PydanticBaseModel
 
 DB_USER = os.getenv("DB_USER", "videosnap")
 DB_PASS = os.getenv("DB_PASS", "videosnap")
@@ -24,7 +25,7 @@ ASYNC_DATABASE_URL = f"mysql+aiomysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/
 
 engine = create_async_engine(
     ASYNC_DATABASE_URL,
-    echo=True,
+    echo=False,
     pool_recycle=3600
 )
 

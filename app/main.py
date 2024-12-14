@@ -8,7 +8,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from app.exception_handlers import register_exception_handlers
 from app.lifetime import lifespan
-from app.router import status_router, video_router
+from app.router import status_router, video_router, resource_router
 from app.app_logging import configure_logging
 
 configure_logging()
@@ -31,6 +31,7 @@ app.add_middleware(
 api_router = APIRouter()
 api_router.include_router(video_router.router)
 api_router.include_router(status_router.router)
+api_router.include_router(resource_router.router)
 
 app.include_router(router=api_router)
 

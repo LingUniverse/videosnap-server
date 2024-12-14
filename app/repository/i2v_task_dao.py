@@ -7,7 +7,7 @@ from typing import Optional
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import asc, desc
+from sqlalchemy import asc, desc, select
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,7 +44,7 @@ async def update_i2v_task(
     update i2v task
     """
     result = await db.execute(
-        db.query(I2vTask).filter(I2vTask.id == task_id)
+        select(I2vTask).filter(I2vTask.id == task_id)
     )
     task = result.scalar_one_or_none()
     if task:
@@ -62,6 +62,6 @@ async def get_i2v_task_by_id(
     get i2v task
     """
     result = await db.execute(
-        db.query(I2vTask).filter(I2vTask.id == task_id)
+        select(I2vTask).filter(I2vTask.id == task_id)
     )
     return result.scalar_one_or_none()

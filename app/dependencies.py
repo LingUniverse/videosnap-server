@@ -33,3 +33,8 @@ async def get_db():
         finally:
             await session.close()
 
+async def get_independent_db_session():
+    """Get an independent database session for background tasks"""
+    async with AsyncSessionLocal() as session:
+        return session
+

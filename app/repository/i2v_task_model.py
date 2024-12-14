@@ -15,16 +15,8 @@ from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import UniqueConstraint
 
-from app.schema.i2v_task_schema import I2vType
 from app.repository.database import BaseMixin
-
-class TaskStatus(Enum):
-    """Task Status"""
-    IDLE = "idle"
-    PROMPT_GENERATED = "prompt_generated"
-    TASK_SUBMITTED = "task_submitted"
-    TASK_COMPLETED = "task_completed"
-    FAILED = "failed"
+from app.schema.i2v_task_schema import I2vType, TaskStatus
 
 class I2vTask(BaseMixin):
     """Image to Video conversion task"""
@@ -41,6 +33,6 @@ class I2vTask(BaseMixin):
         nullable=False
     )
     video_generation_provider = Column(Text, nullable=False)
-    video_generation_prompt = Column(Text, nullable=False)
-    video_generation_id =  Column(Text, nullable=False)
-    output_video_filename = Column(String(length=255), nullable=False)
+    video_generation_prompt = Column(Text, nullable=True)
+    video_generation_id =  Column(Text, nullable=True)
+    output_video_filename = Column(String(length=255), nullable=True)

@@ -3,8 +3,7 @@ import aiohttp
 import json
 import logging
 
-from app.schema.i2v_task_schema import VideoGenerationProvider
-from app.repository.i2v_task_model import TaskStatus
+from app.schema.i2v_task_schema import VideoGenerationProvider, TaskStatus
 from app.settings import SETTINGS
 
 logger = logging.getLogger(__name__)
@@ -26,7 +25,7 @@ class VideoGeneratorFactory:
     @staticmethod
     def create(provider: VideoGenerationProvider) -> VideoGenerator:
         """create"""
-        if provider.value.startswith("MINIMAX"):
+        if provider.startswith("MINIMAX"):
             return MinimaxVideoGenerator()
         else:
             raise ValueError(f"unspport video provider: {provider}")
@@ -36,6 +35,7 @@ class MinimaxVideoGenerator(VideoGenerator):
 
     async def generate(self, image_base64, prompt):
         """generate"""
+        logger.info("MinimaxVideoGenerator.generate invoke() =====> ")
         payload = json.dumps({
             "model": "video-01", 
             "prompt": prompt,
@@ -74,24 +74,25 @@ class MinimaxVideoGenerator(VideoGenerator):
             if task_status.get("status") == "Success":
                 download_url = await self._get_download_url(task_status.get("file_id"))
                 return TaskStatus.TASK_COMPLETED, download_url
-            elif task_status.get("status") == "Failed":
+            elif task_status.get("status") == "Fail":
                 return TaskStatus.FAILED, None
             else:
                 return TaskStatus.TASK_SUBMITTED, None
         except Exception as e:
-            logger.error("Error checking video status: %s", str(e))
+            logger.error("Error checking video status: %s", str(e), exc_info=True)
             return TaskStatus.FAILED, None
 
     async def _get_task_status(self, video_generation_id: str) -> dict:
         """Get task status"""
-        status_url = f"{SETTINGS.MINIMAX_VIDEO_GENERATION_BASE_URL}/query/video_generation"
+        # status_url = f"{SETTINGS.MINIMAX_VIDEO_GENERATION_BASE_URL}/query/video_generation"
         headers = {
             'authorization': f'Bearer {SETTINGS.MINIMAX_VIDEO_GENERATION_API_KEY.get_secret_value()}',
             'content-type': 'application/json'
         }
         
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{status_url}?task_id={video_generation_id}", headers=headers) as response:
+            async with session.get(f"{SETTINGS.MINIMAX_VIDEO_GENERATION_STATUS_URL}?task_id={video_generation_id}", headers=headers) as response:
+                logger.info("response: %s", response)
                 if response.status != 200:
                     raise Exception(f"API error querying status - status {response.status}")
                 result = await response.json()
@@ -101,6 +102,7 @@ class MinimaxVideoGenerator(VideoGenerator):
 
     async def _get_download_url(self, file_id: str) -> str:
         """Get file download URL"""
+        logger.info("get download url, file id: %s", file_id)
         file_url = f"{SETTINGS.MINIMAX_VIDEO_GENERATION_BASE_URL}/files/retrieve"
         headers = {
             'authorization': f'Bearer {SETTINGS.MINIMAX_VIDEO_GENERATION_API_KEY.get_secret_value()}',
@@ -108,7 +110,8 @@ class MinimaxVideoGenerator(VideoGenerator):
         }
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{file_url}?file_id={file_id}", headers=headers) as response:
+            async with session.get(f"https://api.minimax.chat/v1/files/retrieve?file_id={file_id}", headers=headers) as response:
+                logger.info("response: %s", response)
                 if response.status != 200:
                     raise Exception(f"Failed to get download URL - status {response.status}")
                 result = await response.json()

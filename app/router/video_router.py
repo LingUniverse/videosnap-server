@@ -4,10 +4,10 @@ from typing import List
 
 from fastapi import APIRouter, Depends, BackgroundTasks, Request, HTTPException
 from app.schema.base import ResponseModel, StatusCode
-from app.schema.i2v_task_schema import I2vTaskCreateReuqest, I2vTaskResponse, VideoGenerationProvider
-from app.dependencies import get_db
+from app.schema.i2v_task_schema import I2vTaskCreateReuqest, I2vTaskResponse, VideoGenerationProvider, TaskStatus
+from app.dependencies import get_db, get_independent_db_session
 from app.repository import i2v_task_dao
-from app.repository.i2v_task_model import I2vTask, TaskStatus
+from app.repository.i2v_task_model import I2vTask
 from app.service.llm_service import call_generate_i2v_prompt_agent
 from app.service.i2v_service import VideoGeneratorFactory
 from app.utils.file_utils import save_base64_file, read_file_to_base64, save_binary_file
@@ -38,12 +38,12 @@ async def create_i2v_task(
             i2v_task_request.type
         )
         background_tasks.add_task(process_image_to_video, task)
-        return ResponseModel(code=StatusCode.SUCCESS, data=I2vTaskResponse(**task))
+        return ResponseModel(code=StatusCode.SUCCESS, data=task)
     except Exception as e: # pylint: disable=broad-except
         logger.error("Create i2v task failed: %s", e, exc_info=True)
         return ResponseModel(code=StatusCode.ERROR, msg="create task error")
 
-@router.post("/iv2/status", response_model=ResponseModel[List[I2vTaskResponse]], response_model_exclude_none=True)
+@router.post("/i2v/status", response_model=ResponseModel[List[I2vTaskResponse]], response_model_exclude_none=True)
 async def get_i2v_tasks_status(task_ids: List[str], db=Depends(get_db)):
     """get tasks status"""
     try:
@@ -64,7 +64,6 @@ async def get_i2v_tasks_status(task_ids: List[str], db=Depends(get_db)):
             msg="get task status failure"
         )
 
-
 @router.post("/iv2/minimax/get_callback")
 async def get_callback(request: Request):
     """get callback"""
@@ -81,49 +80,56 @@ async def get_callback(request: Request):
 
 async def process_image_to_video(task: I2vTask):
     """start image2video task"""
+    db = await get_independent_db_session()
     try:
         image_base64 = await read_file_to_base64(task.source_image_filename)
-
         # 生成图片的描述词
         vision_prompt = await call_generate_i2v_prompt_agent(image_base64, task.i2v_type)
+        logger.info("vision_prompt: %s", vision_prompt)
+
         update_data = {
             "video_generation_prompt": vision_prompt,
             "status": TaskStatus.PROMPT_GENERATED
         }
-        await i2v_task_dao.update_i2v_task(get_db(), task.id, update_data)
+        await i2v_task_dao.update_i2v_task(db, task.id, update_data)
 
         # 创建图生视频任务
         generator = VideoGeneratorFactory.create(task.video_generation_provider)
-        video_generator_id = generator.generate(image_base64, vision_prompt)
+        video_generator_id = await generator.generate(image_base64, vision_prompt)
         
+        logger.info("video_generator_id is %s", video_generator_id)
         if video_generator_id is None:
             update_data = {
                "status": TaskStatus.FAILED
             }
-            await i2v_task_dao.update_i2v_task(get_db(), task.id, update_data)
+            logger.info("set video status failed")
+            await i2v_task_dao.update_i2v_task(db, task.id, update_data)
             return
 
         update_data = {
             "video_generation_id": video_generator_id,
             "status": TaskStatus.TASK_SUBMITTED
         }
-        await i2v_task_dao.update_i2v_task(get_db(), task.id, update_data)
+        await i2v_task_dao.update_i2v_task(db, task.id, update_data)
         
     except Exception as e: # pylint: disable=broad-except
-        logger.error("process_image_to_video: %s", e)
-        await i2v_task_dao.update_i2v_task(get_db(), task.id, {"status": "FAILED"})
+        logger.error("process_image_to_video: %s", e, exc_info=True)
+        await i2v_task_dao.update_i2v_task(db, task.id, {"status": "FAILED"})
+    finally:
+        await db.close()
 
-async def query_task_status(task_id: str, db) -> I2vTaskResponse:
+async def query_task_status(task_id: str, db) -> I2vTask:
     """query task status"""
     try:
         task = await i2v_task_dao.get_i2v_task_by_id(db, task_id)
         if not task:
             logger.warning("task not found, tid: %s", task_id)
             return None
-            
 
-        if task.status in [TaskStatus.IDLE, TaskStatus.PROMPT_GENERATED]:
-            return I2vTaskResponse(**task)
+        logger.info("query task status %s", task.__dict__)
+
+        if task.status in [TaskStatus.IDLE, TaskStatus.PROMPT_GENERATED, TaskStatus.FAILED]:
+            return task
             
         elif task.status == TaskStatus.TASK_SUBMITTED:
             try:
@@ -131,7 +137,7 @@ async def query_task_status(task_id: str, db) -> I2vTaskResponse:
                 status, download_url = await generator.check_status(task.video_generation_id)
 
                 if status == TaskStatus.TASK_SUBMITTED:
-                    return I2vTaskResponse(**task)
+                    return task
 
                 if status == TaskStatus.TASK_COMPLETED and download_url:
                     #TODO@ztp 这里封装一下
@@ -145,8 +151,7 @@ async def query_task_status(task_id: str, db) -> I2vTaskResponse:
                         # 使用file_utils保存视频文件到videos子目录
                         video_filename = await save_binary_file(
                             video_content,
-                            "output.mp4",
-                            sub_dir="videos"
+                            "output.mp4"
                         )
 
                         update_data = {
@@ -163,18 +168,19 @@ async def query_task_status(task_id: str, db) -> I2vTaskResponse:
                         return await i2v_task_dao.update_i2v_task(db, task_id, update_data)
 
                 elif status == TaskStatus.FAILED:
-                        update_data = {
-                            "status": TaskStatus.FAILED
-                        }
-                        return await i2v_task_dao.update_i2v_task(db, task_id, update_data)
+                    pass
+                    # update_data = {
+                    #     "status": TaskStatus.FAILED
+                    # }
+                    # return await i2v_task_dao.update_i2v_task(db, task_id, update_data)
             
             except Exception as e:
                 logger.error("查询任务{task_id}状态失败: {str(e)}")
-                return I2vTaskResponse(**task)
+                return task
             
         elif task.status in [TaskStatus.TASK_COMPLETED, TaskStatus.FAILED]:
-            return I2vTaskResponse(**task)
+            return task
 
     except Exception as e: # pylint: disable=broad-except
-        logger.error("query task status error, tid: %s", task_id)
+        logger.error("query task status error, tid: %s", task_id, exc_info=True)
         return None

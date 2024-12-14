@@ -1,7 +1,7 @@
 """llm service"""
 
 import logging
-from litellm import completion
+from litellm import acompletion
 from app.schema.i2v_task_schema import I2vType
 from app.util.constant import IMAGINATIVE_SYSTEM_PROMPT, REALISTIC_SYSTEM_PROMPT
 
@@ -12,8 +12,8 @@ async def call_generate_i2v_prompt_agent(image_base64: str, i2v_type: I2vType) -
     message = _generate_message(image_base64, i2v_type)
     
     try:
-        response = completion(
-            model="azure/gpt-4-vision",  #TODO@ztp 抽为配置
+        response = await acompletion(
+            model="azure/gpt-4o",  #TODO@ztp 抽为配置
             messages=message,
             temperature=1
         )
@@ -34,19 +34,19 @@ def _generate_message(image_base64: str, i2v_type: I2vType) -> list:
         raise ValueError(f"unsupport i2v_type: {i2v_type}")
     
     return [
-        {"role": "system", "content": system_prompt},
+        # {"role": "system", "content": system_prompt},
         {
             "role": "user",
             "content": [
                 {
-                    "type": "image",
+                    "type": "image_url",
                     "image_url": {
                         "url": f"data:image/jpeg;base64,{image_base64}"
                     }
                 },
                 {
                     "type": "text",
-                    "text": "请根据这张图片生成一个详细的提示词描述。"
+                    "text": system_prompt
                 }
             ]
         }
