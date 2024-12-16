@@ -19,11 +19,12 @@ RUN pip install --upgrade pip && \
     pip install --no-cache-dir --ignore-installed --upgrade -r /code/requirements.txt
 
 # Set ENV_FILE environment variable to reference the copied file
-ENV ENV_FILE=/code/ai-boardgame-service.env
+ENV ENV_FILE=/code/videosnap-dev.env
 ENV ENVIRONMENT=production
 
 COPY ./app /code/app
-COPY ./ai-boardgame-service.env /code/ai-boardgame-service.env
+COPY ./migrations /code/migrations
+COPY ./videosnap-dev.env /code/videosnap-dev.env
 COPY ./manifest.metadata /code/manifest.metadata
 
 CMD ["uvicorn", "app.main:app", "--proxy-headers", "--host", "0.0.0.0", "--port", "80", "--timeout-keep-alive", "300", "--workers", "4"]

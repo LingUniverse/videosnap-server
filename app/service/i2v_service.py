@@ -37,7 +37,7 @@ class MinimaxVideoGenerator(VideoGenerator):
         """generate"""
         logger.info("MinimaxVideoGenerator.generate invoke() =====> ")
         payload = json.dumps({
-            "model": "video-01", 
+            "model": "video-01-live2d", 
             "prompt": prompt,
             "first_frame_image": f"data:image/jpeg;base64,{image_base64}",
             "prompt_optimizer": True,

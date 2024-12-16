@@ -10,4 +10,4 @@ services:
       - ./app:/app-instance
     environment:
       - PYTHONUNBUFFERED=1
-      - ENV_FILE=/code/ai-boardgame-dev.env
+      - ENV_FILE=/code/videosnap-dev.env
