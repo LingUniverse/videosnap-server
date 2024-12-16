@@ -11,3 +11,9 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - ENV_FILE=/code/videosnap-dev.env
+    networks:
+      - shared-network
+
+networks:
+  shared-network:
+    external: true
